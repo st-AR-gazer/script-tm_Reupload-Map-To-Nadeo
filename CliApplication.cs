@@ -55,19 +55,21 @@ internal static class CliApplication
 
         LoadEnvironmentFiles();
 
-        string originalPath = Path.GetFullPath(options.OriginalMapPath!);
+        string? originalPath = options.OriginalMapPath is null ? null : Path.GetFullPath(options.OriginalMapPath);
         string newPath = Path.GetFullPath(options.NewMapPath!);
         string outputPath = ResolveOutputPath(options.OutputPath, newPath);
 
-        if (PathEquals(originalPath, outputPath))
+        if (originalPath is not null && PathEquals(originalPath, outputPath))
         {
             throw new CommandLineException("The output cannot overwrite the original map.");
         }
 
         Console.WriteLine("Preparing replacement map...");
-        var result = MapUidRewriter.Rewrite(originalPath, newPath, outputPath);
+        var result = originalPath is null
+            ? MapUidRewriter.RewriteFromUid(options.OriginalUid!, newPath, outputPath)
+            : MapUidRewriter.Rewrite(originalPath, newPath, outputPath);
 
-        Console.WriteLine($"Original map : {result.OriginalMapName}");
+        Console.WriteLine($"Original map : {result.OriginalMapName ?? "(UID supplied directly)"}");
         Console.WriteLine($"Original UID : {result.OriginalUid}");
         Console.WriteLine($"New map      : {result.NewMapName}");
         Console.WriteLine($"Previous UID : {result.PreviousUid}");
@@ -79,7 +81,7 @@ internal static class CliApplication
             await ResultFile.WriteAsync(
                 options.ResultJsonPath,
                 new ReuploadResult(
-                    result.OriginalMapName,
+                    result.OriginalMapName ?? "(UID supplied directly)",
                     result.NewMapName,
                     result.OriginalUid,
                     result.PreviousUid,
@@ -129,7 +131,7 @@ internal static class CliApplication
         await ResultFile.WriteAsync(
             options.ResultJsonPath,
             new ReuploadResult(
-                result.OriginalMapName,
+                result.OriginalMapName ?? remoteMap.Name,
                 result.NewMapName,
                 result.OriginalUid,
                 result.PreviousUid,

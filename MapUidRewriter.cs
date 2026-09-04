@@ -17,16 +17,31 @@ internal static class MapUidRewriter
             throw new InvalidOperationException("The original map and new map must be different files.");
         }
 
-        var originalGbx = Gbx.Parse<CGameCtnChallenge>(originalMapPath);
-        var newGbx = Gbx.Parse<CGameCtnChallenge>(newMapPath);
-
-        CGameCtnChallenge originalMap = originalGbx.Node;
-        CGameCtnChallenge newMap = newGbx.Node;
+        CGameCtnChallenge originalMap = Gbx.Parse<CGameCtnChallenge>(originalMapPath).Node;
 
         string originalUid = RequireUid(originalMap.MapUid, "original map");
-        string previousUid = RequireUid(newMap.MapUid, "new map");
-
         ValidateXmlMatchesMapUid(originalMap, originalUid, "original map");
+
+        return RewriteCore(originalUid, originalMap.MapName, newMapPath, outputPath);
+    }
+
+    public static MapRewriteResult RewriteFromUid(string originalUid, string newMapPath, string outputPath)
+    {
+        ValidateInputMapPath(newMapPath, "new");
+        ValidateOutputMapPath(outputPath);
+
+        return RewriteCore(MapUidInput.Normalize(originalUid), originalMapName: null, newMapPath, outputPath);
+    }
+
+    private static MapRewriteResult RewriteCore(
+        string originalUid,
+        string? originalMapName,
+        string newMapPath,
+        string outputPath)
+    {
+        var newGbx = Gbx.Parse<CGameCtnChallenge>(newMapPath);
+        CGameCtnChallenge newMap = newGbx.Node;
+        string previousUid = RequireUid(newMap.MapUid, "new map");
         ValidateXmlMatchesMapUid(newMap, previousUid, "new map");
 
         newMap.MapUid = originalUid;
@@ -58,7 +73,7 @@ internal static class MapUidRewriter
         }
 
         return new MapRewriteResult(
-            originalMap.MapName,
+            originalMapName,
             newMap.MapName,
             originalUid,
             previousUid,
@@ -151,11 +166,29 @@ internal static class MapUidRewriter
 }
 
 internal sealed record MapRewriteResult(
-    string OriginalMapName,
+    string? OriginalMapName,
     string NewMapName,
     string OriginalUid,
     string PreviousUid,
     string OutputPath);
+
+internal static partial class MapUidInput
+{
+    public static string Normalize(string? uid)
+    {
+        string normalized = String.IsNullOrWhiteSpace(uid) ? string.Empty : uid.Trim();
+        if (!UidPattern().IsMatch(normalized))
+        {
+            throw new InvalidDataException(
+                "The original map UID must be 1-128 ASCII letters, numbers, hyphens, or underscores.");
+        }
+
+        return normalized;
+    }
+
+    [GeneratedRegex(@"^[A-Za-z0-9_-]{1,128}$", RegexOptions.CultureInvariant)]
+    private static partial Regex UidPattern();
+}
 
 internal static partial class MapHeaderXml
 {

@@ -1,11 +1,13 @@
 # Reupload Map To Nadeo
 
-A .NET command-line tool that takes two Trackmania 2020 maps:
+A .NET command-line tool that normally takes two Trackmania 2020 maps:
 
 1. an **original map**
 2. a **new map** whose contents should replace the original
 
 The tool copies the original map UID into the new map, verifies that the UID is consistent in the saved GBX header, body, and XML header, then updates the existing map through `ManiaAPI.NadeoAPI`.
+
+If the original file is unavailable, its Nadeo map UID can be supplied explicitly with `--original-uid`. Using the original map file remains the default and safest workflow.
 
 The input files are left untouched by default. The prepared replacement is written to `out/<new map file name>`.
 
@@ -40,6 +42,12 @@ dotnet run -- "C:\Maps\Original.Map.Gbx" "C:\Maps\New.Map.Gbx"
 ```
 
 The tool authenticates, shows the matching remote map, and asks for confirmation immediately before the update.
+
+Use an existing Nadeo UID instead of an original map file:
+
+```powershell
+.\ReuploadMapToNadeo.exe --original-uid "Jd7V62wQ1Hus9OlhNU3nP9lnoi0" "C:\Maps\New.Map.Gbx"
+```
 
 Prepare and verify the replacement without contacting Nadeo:
 

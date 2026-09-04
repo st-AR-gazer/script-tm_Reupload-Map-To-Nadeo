@@ -2,6 +2,7 @@ namespace ReuploadMapToNadeo;
 
 internal sealed record CommandLineOptions(
     string? OriginalMapPath,
+    string? OriginalUid,
     string? NewMapPath,
     string? OutputPath,
     string? ResultJsonPath,
@@ -13,10 +14,11 @@ internal sealed record CommandLineOptions(
     {
         if (args.Any(IsHelpOption))
         {
-            return new(null, null, null, null, NoUpload: false, AutoConfirm: false, ShowHelp: true);
+            return new(null, null, null, null, null, NoUpload: false, AutoConfirm: false, ShowHelp: true);
         }
 
         var positional = new List<string>(capacity: 2);
+        string? originalUid = null;
         string? outputPath = null;
         string? resultJsonPath = null;
         bool noUpload = false;
@@ -46,6 +48,38 @@ internal sealed record CommandLineOptions(
                 }
 
                 outputPath = args[index];
+                continue;
+            }
+
+            if (!optionsEnded && argument == "--original-uid")
+            {
+                if (originalUid is not null)
+                {
+                    throw new CommandLineException("--original-uid can only be specified once.");
+                }
+
+                if (++index >= args.Count || string.IsNullOrWhiteSpace(args[index]))
+                {
+                    throw new CommandLineException("--original-uid requires a map UID.");
+                }
+
+                originalUid = args[index].Trim();
+                continue;
+            }
+
+            if (!optionsEnded && argument.StartsWith("--original-uid=", StringComparison.Ordinal))
+            {
+                if (originalUid is not null)
+                {
+                    throw new CommandLineException("--original-uid can only be specified once.");
+                }
+
+                originalUid = argument["--original-uid=".Length..].Trim();
+                if (string.IsNullOrWhiteSpace(originalUid))
+                {
+                    throw new CommandLineException("--original-uid requires a map UID.");
+                }
+
                 continue;
             }
 
@@ -117,14 +151,21 @@ internal sealed record CommandLineOptions(
             positional.Add(argument);
         }
 
-        if (positional.Count != 2)
+        if (originalUid is null && positional.Count != 2)
         {
             throw new CommandLineException("Exactly two map paths are required: the original map and the new map.");
         }
 
+        if (originalUid is not null && positional.Count != 1)
+        {
+            throw new CommandLineException(
+                "When --original-uid is used, exactly one map path is required: the new map.");
+        }
+
         return new(
-            positional[0],
-            positional[1],
+            originalUid is null ? positional[0] : null,
+            originalUid,
+            originalUid is null ? positional[1] : positional[0],
             outputPath,
             resultJsonPath,
             noUpload,
@@ -139,8 +180,11 @@ internal sealed record CommandLineOptions(
         writer.WriteLine();
         writer.WriteLine("Usage:");
         writer.WriteLine("  ReuploadMapToNadeo <original.Map.Gbx> <new.Map.Gbx> [options]");
+        writer.WriteLine("  ReuploadMapToNadeo --original-uid <uid> <new.Map.Gbx> [options]");
         writer.WriteLine();
         writer.WriteLine("Options:");
+        writer.WriteLine("      --original-uid <uid>");
+        writer.WriteLine("                       Use an existing Nadeo map UID instead of an original map file.");
         writer.WriteLine("  -o, --output <path>  Prepared output file or existing directory.");
         writer.WriteLine("                       Default: ./out/<new map file name>");
         writer.WriteLine("      --no-upload      Prepare and verify the file without contacting Nadeo.");
