@@ -7,6 +7,8 @@ A .NET command-line tool that normally takes two Trackmania 2020 maps:
 
 The tool copies the original map UID into the new map, verifies that the UID is consistent in the saved GBX header, body, and XML header, then updates the existing map through `ManiaAPI.NadeoAPI`.
 
+The replacement map's existing GBX and XML UIDs may disagree. Both are overwritten with the selected original UID, and the saved identities are verified before uploading. When an original map file supplies the identity, that original file must still have a consistent UID.
+
 If the original file is unavailable, its Nadeo map UID can be supplied explicitly with `--original-uid`. Using the original map file remains the default and safest workflow.
 
 The input files are left untouched by default. The prepared replacement is written to `out/<new map file name>`.

@@ -42,7 +42,8 @@ internal static class MapUidRewriter
         var newGbx = Gbx.Parse<CGameCtnChallenge>(newMapPath);
         CGameCtnChallenge newMap = newGbx.Node;
         string previousUid = RequireUid(newMap.MapUid, "new map");
-        ValidateXmlMatchesMapUid(newMap, previousUid, "new map");
+        // Replacement UIDs may disagree before rewriting. The selected original UID
+        // is authoritative; VerifySavedMap checks every saved identity after rewriting.
 
         newMap.MapUid = originalUid;
         newMap.Xml = MapHeaderXml.ReplaceUid(
